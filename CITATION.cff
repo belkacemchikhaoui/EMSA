@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the accompanying paper."
+title: "EMSA: An Empathic Multimodal Shopping Assistant for Context-Aware Recommendations"
+authors:
+  - family-names: Chikhaoui
+    given-names: Belkacem
+    affiliation: "Applied Artificial Intelligence Institute, TELUQ University"
+  - family-names: Alabed
+    given-names: Amani
+    affiliation: "Applied Artificial Intelligence Institute, TELUQ University"
+date-released: 2026-08-28
+repository-code: "https://github.com/<org>/emsa"
+license: MIT

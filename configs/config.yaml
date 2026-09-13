@@ -1,0 +1,99 @@
+# EMSA configuration
+# All hyperparameters here mirror the values reported in the paper.
+# Dataset paths are placeholders -- point them at your local copies.
+
+paths:
+  vogue_root: "/path/to/VOGUE"          # expects dialogues.json, images/, item_metadata.csv
+  pixelrec_root: "/path/to/PixelRec"    # expects interactions.parquet, item_features/, item_metadata.parquet
+  mmshop_root: "/path/to/MM-SHOP"       # expects dialogues.json, video_features/, user_profiles.json
+  output_dir: "./results"
+  checkpoint_dir: "./checkpoints"
+
+model:
+  visual_encoder: "resnet50"
+  text_encoder: "bert-base-uncased"
+  hidden_size: 768
+  num_attention_heads: 8
+  num_transformer_layers: 6
+  num_visual_regions: 36        # 6x6 grid from ResNet-50 conv5 feature map
+  dropout_rate: 0.1
+  max_text_length: 64
+  freeze_text_encoder: false    # set true to freeze BERT weights -- by far the biggest speedup lever
+  freeze_visual_encoder: false  # set true to freeze ResNet-50 weights
+
+training:
+  batch_size: 16
+  eval_batch_size: 32
+  learning_rate: 2.0e-5
+  num_epochs: 20
+  warmup_steps: 500
+  weight_decay: 0.01
+  grad_clip_norm: 1.0
+  seed: 42
+  early_stopping_patience: 5
+  num_workers: 0  # Windows: DataLoader multiprocessing (num_workers>0) re-imports torch/scipy/transformers
+                   # in each spawned worker, which can crash with a native MKL/Fortran runtime conflict
+                   # (e.g. libifcoremd.dll) and silently hang the main process. Safe to raise on Linux/Mac.
+  mixed_precision: true
+
+ppo:
+  clip_epsilon: 0.2
+  gamma: 0.99
+  gae_lambda: 0.95
+  value_coef: 0.5
+  entropy_coef: 0.01
+  ppo_epochs: 4
+  rollout_batch_size: 8
+  lambda_empathy: 0.3    # weight on empathy-improvement reward (Eq. 7)
+  lambda_coherence: 0.2  # weight on coherence reward (Eq. 7)
+
+recommendation:
+  top_k: [1, 3, 5, 10]
+  candidate_pool_size: 100   # negatives sampled per positive at eval time
+  utility_hidden_size: 128   # small NN that predicts [alpha, beta, gamma]
+
+pixelrec:
+  max_users: null  # cap the number of users processed, for fast debug runs on a large interaction.csv
+                    # (e.g. set to 5000 for a quick smoke test; null = use the full dataset)
+  num_negatives: 19  # candidate pool size per sample. At full PixelRec scale (~3.9M interactions),
+                      # num_negatives=99 (the earlier default) means ~3.9M samples x 100-item candidate
+                      # lists of Python strings, which can reach 30-40GB+ of Python object overhead alone
+                      # and OOM-crash on a 32GB machine with no clean error (Windows kills the process
+                      # rather than raising a MemoryError). 19 keeps memory far more manageable; raise it
+                      # back toward 99 only if you have the RAM headroom (see the startup log's memory
+                      # estimate) or are using `max_users` to limit the dataset size.
+  min_user_interactions: 3
+
+empathy:
+  num_emotion_categories: 6   # e.g. neutral, uncertain, satisfied, frustrated, excited, disappointed
+  affect_top_k: 2
+
+ablation:
+  num_epochs: 8              # ablation variants need fewer epochs than the main run to show a directional effect
+  early_stopping_patience: 3
+  variants:
+    - full
+    - no_cross_attention
+    - no_empathy_reward
+    - no_dynamic_weights
+    - no_video
+    - no_user_history
+    - single_modal
+
+robustness:
+  video_occlusion_levels: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+  asr_error_rates: [0.0, 0.1, 0.2, 0.3]
+
+cold_start:
+  interaction_counts: [1, 5, 10, 20, 50]
+
+baselines:
+  - visualbert_crs
+  - mm_dialog
+  - emorec
+  - cosrec
+  - redial_bert
+  - unimind
+  - emma
+
+device: "cuda"   # falls back to cpu automatically if unavailable
