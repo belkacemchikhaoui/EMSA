@@ -162,6 +162,3 @@ emsa/
 └── notebooks/           # thin exploratory/demo notebook (not the source of truth)
 ```
 
-## Citation
-
-If you use this code, please cite the paper. See `CITATION.cff`.
